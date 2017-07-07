@@ -34,6 +34,7 @@ namespace TodoApi
         {
             // Add framework services.
             services.AddDbContext<TodoContext>(opt => opt.UseSqlite("Data Source=todo.db"));
+            
             services.AddMvc();
             services.AddSwaggerGen(c =>
             {
@@ -47,7 +48,7 @@ namespace TodoApi
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, IApplicationLifetime appLifetime)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, IApplicationLifetime appLifetime, TodoContext context)
         {
             //loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             //loggerFactory.AddDebug();
@@ -65,6 +66,8 @@ namespace TodoApi
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "Todo API V1");
             });
 
+            // Migrate database
+            context.Database.Migrate();
         }
     }
 }
