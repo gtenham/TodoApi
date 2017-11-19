@@ -3,20 +3,19 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
-using TodoApi.Models;
+using TodoApi.Infrastructure.Data;
 
 namespace TodoApi.Migrations
 {
-    [DbContext(typeof(TodoContext))]
-    [Migration("20170530130519_InitialCreate")]
-    partial class InitialCreate
+    [DbContext(typeof(ApplicationContext))]
+    partial class ApplicationContextModelSnapshot : ModelSnapshot
     {
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
             modelBuilder
                 .HasAnnotation("ProductVersion", "1.1.1");
 
-            modelBuilder.Entity("TodoApi.Models.TodoItem", b =>
+            modelBuilder.Entity("TodoApi.Core.Domain.Todo", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd();

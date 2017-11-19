@@ -8,7 +8,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
-using TodoApi.Models;
+using TodoApi.Infrastructure.Data;
+using TodoApi.Core.Domain;
 using TodoApi.Middleware;
 using Swashbuckle.AspNetCore.Swagger;
 using Serilog;
@@ -33,7 +34,8 @@ namespace TodoApi
         public void ConfigureServices(IServiceCollection services)
         {
             // Add framework services.
-            services.AddDbContext<TodoContext>(opt => opt.UseSqlite("Data Source=todo.db"));
+            services.AddScoped<ITodoRepository, TodoRepository>();
+            services.AddDbContext<ApplicationContext>(opt => opt.UseSqlite("Data Source=todo.db"));
             
             services.AddMvc();
             services.AddSwaggerGen(c =>
@@ -48,7 +50,7 @@ namespace TodoApi
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, IApplicationLifetime appLifetime, TodoContext context)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, IApplicationLifetime appLifetime)
         {
             //loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             //loggerFactory.AddDebug();
@@ -66,6 +68,7 @@ namespace TodoApi
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "Todo API V1");
             });
 
+            var context = app.ApplicationServices.GetService<ApplicationContext>();
             // Migrate database
             context.Database.Migrate();
         }

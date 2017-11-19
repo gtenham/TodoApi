@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using TodoApi.Models;
+using TodoApi.Infrastructure.Data;
+using TodoApi.Core.Domain;
 using System.Linq;
 using System;
 using Microsoft.Extensions.Logging;
@@ -10,35 +12,42 @@ namespace TodoApi.Controllers
     [Route("api/[Controller]")]
     public class TodoController : Controller
     {
-        private readonly TodoContext _context;
+        private readonly ITodoRepository _todoRepository;
         private readonly ILogger _logger;
 
-        public TodoController(TodoContext context, ILogger<TodoController> logger)
+        public TodoController(ITodoRepository todoRepository, ILogger<TodoController> logger)
         {
-            _context = context;
+            _todoRepository = todoRepository;
             _logger = logger;
-
-            if (_context.TodoItems.Count() == 0)
-            {
-                _context.TodoItems.Add(new TodoItem { Name = "Item1" });
-                _context.SaveChanges();
-            }
         }   
 
         [HttpGet]
         public IEnumerable<TodoItem> GetAll()
         {
-            return _context.TodoItems.ToList();
+            IEnumerable<TodoItem> model = _todoRepository.GetAllTodos().Select(s => new TodoItem
+            {
+                Id = s.Id,
+                Name = s.Name,
+                IsComplete = s.IsComplete
+            });
+            return model;
         }
 
         [HttpGet("{id:long}", Name = "GetTodo")]
         public IActionResult GetById(long id)
         {
-            var item = _context.TodoItems.FirstOrDefault(t => t.Id == id);
-            if (item == null)
+            Todo todo = _todoRepository.GetTodo(id);
+            if (todo == null)
             {
                 return NotFound();
             }
+
+            var item = new TodoItem {
+                Id = todo.Id,
+                Name = todo.Name,
+                IsComplete = todo.IsComplete
+            };
+
             return new ObjectResult(item);
         }  
 
@@ -58,32 +67,35 @@ namespace TodoApi.Controllers
         /// <param name="item"></param>
         /// <returns>New Created Todo Item</returns>
         /// <response code="201">Returns the newly created item</response>
-        /// <response code="400">If the item is null</response>
+        /// <response code="400">If the item is null or invalid</response>
         [HttpPost]
         [ProducesResponseType(typeof(TodoItem), 201)]
         [ProducesResponseType(typeof(TodoItem), 400)]
         public IActionResult Create([FromBody] TodoItem item)
         {
-            if (item == null)
+            if (item == null || !ModelState.IsValid)
             {
                 return BadRequest();
             }
-
-            _context.TodoItems.Add(item);
-            _context.SaveChanges();
-
+            Todo todo = new Todo {
+                Id = item.Id,
+                Name = item.Name,
+                IsComplete = item.IsComplete
+            };
+            _todoRepository.SaveTodo(todo);
+            
             return CreatedAtRoute("GetTodo", new { id = item.Id }, item);
         }
 
         [HttpPut("{id:long}")]
         public IActionResult Update(long id, [FromBody] TodoItem item)
         {
-            if (item == null || item.Id != id)
+            if (item == null || item.Id != id || !ModelState.IsValid)
             {
                 return BadRequest();
             }
 
-            var todo = _context.TodoItems.FirstOrDefault(t => t.Id == id);
+            Todo todo = _todoRepository.GetTodo(id);
             if (todo == null)
             {
                 return NotFound();
@@ -91,9 +103,8 @@ namespace TodoApi.Controllers
 
             todo.IsComplete = item.IsComplete;
             todo.Name = item.Name;
-
-            _context.TodoItems.Update(todo);
-            _context.SaveChanges();
+            _todoRepository.UpdateTodo(todo);
+            
             return new NoContentResult();
         }
 
@@ -104,35 +115,14 @@ namespace TodoApi.Controllers
         [HttpDelete("{id:long}")]
         public IActionResult Delete(long id)
         {
-            var todo = _context.TodoItems.First(t => t.Id == id);
+            Todo todo = _todoRepository.GetTodo(id);
             if (todo == null)
             {
                 return NotFound();
             }
-
-            _context.TodoItems.Remove(todo);
-            _context.SaveChanges();
+            _todoRepository.DeleteTodo(todo);
+            
             return new NoContentResult();
-        }
-
-        [HttpGet("error")]
-        public IActionResult raiseError()
-        {
-            // Just throw a generic exception.
-            throw new Exception("Some error yo");
-        }
-
-        [HttpGet("showLogging")]
-        public IActionResult showSomeLogging()
-        {
-            _logger.LogTrace("Hello Trace");
-            _logger.LogDebug("Debug heaven");
-            _logger.LogInformation("Some informational stuff");
-            _logger.LogWarning("You'll be warned!");
-            _logger.LogError("Errors should be handled");
-            _logger.LogCritical("You've got fatals on your hand");
-
-            return new NoContentResult();
-        }
+        }        
     }
 }
