@@ -28,5 +28,7 @@ msbuild.log
 msbuild.err
 msbuild.wrn
 
+*.db
+
 # Visual Studio 2015
 .vs/
